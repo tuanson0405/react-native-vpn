@@ -1,12 +1,18 @@
-import { NativeModules, NativeEventEmitter } from 'react-native'
+import { NativeModules, NativeEventEmitter } from 'react-native';
 
-const { Vpn } = NativeModules
+const { Vpn } = NativeModules;
 
-const VpnEmitter = new NativeEventEmitter(Vpn)
+const VpnEmitter = new NativeEventEmitter(Vpn);
 
 export default {
   emitter: VpnEmitter,
-  sampleMethod (data, callback) {
-    return Vpn.sampleMethod(data, callback);
+  connectVpn () {
+    return Vpn.connectVpn();
+  },
+  disconnectVpn () {
+    return Vpn.disconnectVpn();
+  },
+  setupVpn () {
+    return Vpn.setupServer();
   },
 };
