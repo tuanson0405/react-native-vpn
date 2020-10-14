@@ -9,16 +9,16 @@ export default {
    * Listen VPN events - VPN status change
    */
   statusListener (onStatusChange) {
-    VpnEmitter.addEventListener('VPN_EVENT_STATUS', onStatusChange);
+    VpnEmitter.addListener('VPN_EVENT_STATUS', onStatusChange, null);
   },
   infoListener (onInfoChange) {
-    VpnEmitter.addEventListener('VPN_EVENT_INFO', onInfoChange);
+    VpnEmitter.addListener('VPN_EVENT_INFO', onInfoChange, null);
   },
   /**
    * Remove events listener
    */
   removeListener () {
-    VpnEmitter.removeListener();
+    VpnEmitter.removeCurrentListener();
   },
   getVpnStatus () {
     return Vpn.getVpnStatus()
