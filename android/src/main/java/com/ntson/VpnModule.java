@@ -37,7 +37,10 @@ import static android.app.Activity.RESULT_OK;
 public class VpnModule extends ReactContextBaseJavaModule implements ActivityEventListener {
 
     private static ReactApplicationContext reactContext = null;
-    private static final String EVENT_NAME = "VPN_EVENT";
+    private static final String VPN_EVENT_STATUS = "VPN_EVENT_STATUS";
+    private static final String VPN_EVENT_INFO = "VPN_EVENT_INFO";
+    private static final String STATUS_ERROR = "ERROR";
+    private static final String STATUS_CONNECTING = "CONNECTING";
     private static final String TAG = "VPN_EVENT";
 
     private OpenVPNThread vpnThread = new OpenVPNThread();
@@ -65,19 +68,35 @@ public class VpnModule extends ReactContextBaseJavaModule implements ActivityEve
     /**
      * Emit event from native to JS
      *
-     * @param status - Connect status
-     * @param error  - Error message
+     * @param status  - Connect status
+     * @param message - Error message
      */
-    private void emitEvent(String status, String error) {
+    private void emitStatusEvent(String status, String message) {
         WritableMap params = Arguments.createMap();
         params.putString("status", status);
-        if (error == null || error.isEmpty()) {
-            params.putNull("error");
+        if (message == null || message.isEmpty()) {
+            params.putNull("message");
         } else {
-            params.putString("error", error);
+            params.putString("message", message);
         }
 
-        reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(EVENT_NAME, params);
+        reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(VPN_EVENT_STATUS, params);
+    }
+
+    /**
+     * @param duration          - time
+     * @param lastPacketReceive - packet receive
+     * @param byteIn            - receive
+     * @param byteOut           - sent
+     */
+    private void emitInfoEvent(String duration, String lastPacketReceive, String byteIn, String byteOut) {
+        WritableMap params = Arguments.createMap();
+        params.putString("duration", duration);
+        params.putString("lastPacketReceive", lastPacketReceive);
+        params.putString("byteIn", byteIn);
+        params.putString("byteOut", byteOut);
+
+        reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(VPN_EVENT_INFO, params);
     }
 
     @Override
@@ -86,7 +105,7 @@ public class VpnModule extends ReactContextBaseJavaModule implements ActivityEve
             //Permission granted, start the VPN
             connectVpn();
         } else {
-            emitEvent("", "Permission Deny");
+            emitStatusEvent(STATUS_ERROR, "Permission Deny");
         }
     }
 
@@ -138,21 +157,20 @@ public class VpnModule extends ReactContextBaseJavaModule implements ActivityEve
     }
 
     @ReactMethod
-    public void setupServer() {
+    public void connectVpn() {
         if (!OpenVPNService.getStatus().equals("CONNECTED")) {
             Intent intent = VpnService.prepare(reactContext);
             if (intent != null) {
                 reactContext.startActivityForResult(intent, 1, null);
             } else {
-                connectVpn();
+                startVpn();
             }
         } else {
             disconnectVpn();
         }
     }
 
-    @ReactMethod
-    public void connectVpn() {
+    private void startVpn() {
         try {
             Server server = new Server("United States",
                     null,
@@ -164,8 +182,10 @@ public class VpnModule extends ReactContextBaseJavaModule implements ActivityEve
             Log.d(TAG, config);
 //            OpenVpnApi.startVpn(reactContext, mServer.getConfig(), mServer.getCountry(), mServer.getOvpnUserName(), mServer.getOvpnUserPassword());
             OpenVpnApi.startVpn(reactContext, config, server.getCountry(), server.getOvpnUserName(), server.getOvpnUserPassword());
+            emitStatusEvent(STATUS_CONNECTING, null);
         } catch (RemoteException e) {
             e.printStackTrace();
+            emitStatusEvent(STATUS_ERROR, e.getMessage());
         }
     }
 
@@ -173,6 +193,7 @@ public class VpnModule extends ReactContextBaseJavaModule implements ActivityEve
     public void disconnectVpn() {
         try {
             OpenVPNThread.stop();
+            emitStatusEvent("DISCONNECTED", null);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -196,11 +217,7 @@ public class VpnModule extends ReactContextBaseJavaModule implements ActivityEve
         public void onReceive(Context context, Intent intent) {
             try {
                 String status = intent.getStringExtra("state");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            try {
+                emitStatusEvent(status, null);
 
                 String duration = intent.getStringExtra("duration");
                 String lastPacketReceive = intent.getStringExtra("lastPacketReceive");
@@ -211,14 +228,12 @@ public class VpnModule extends ReactContextBaseJavaModule implements ActivityEve
                 if (lastPacketReceive == null) lastPacketReceive = "0";
                 if (byteIn == null) byteIn = " ";
                 if (byteOut == null) byteOut = " ";
-                Log.d("duration ", duration);
-                Log.d("lastPacketReceive ", lastPacketReceive);
-                Log.d("byteIn ", byteIn);
-                Log.d("byteOut ", byteOut);
+
+                emitInfoEvent(duration, lastPacketReceive, byteIn, byteOut);
             } catch (Exception e) {
                 e.printStackTrace();
+                emitStatusEvent(STATUS_ERROR, e.getMessage());
             }
-
         }
     };
 }
