@@ -1,32 +1,26 @@
-import { NativeModules, NativeEventEmitter } from 'react-native';
+import { NativeModules, NativeEventEmitter } from 'react-native'
 
-const { Vpn } = NativeModules;
+const { Vpn } = NativeModules
 
-const VpnEmitter = new NativeEventEmitter(Vpn);
+const VpnEmitter = new NativeEventEmitter(Vpn)
 
 export default {
   /**
    * Listen VPN events - VPN status change
    */
   statusListener (onStatusChange) {
-    VpnEmitter.addListener('VPN_EVENT_STATUS', onStatusChange, null);
+    return VpnEmitter.addListener('VPN_EVENT_STATUS', onStatusChange, null)
   },
   infoListener (onInfoChange) {
-    VpnEmitter.addListener('VPN_EVENT_INFO', onInfoChange, null);
-  },
-  /**
-   * Remove events listener
-   */
-  removeListener () {
-    VpnEmitter.removeCurrentListener();
+    return VpnEmitter.addListener('VPN_EVENT_INFO', onInfoChange, null)
   },
   getVpnStatus () {
     return Vpn.getVpnStatus()
   },
-  connectVpn () {
-    return Vpn.connectVpn();
+  connectVpn ({ config, country, username, password }) {
+    return Vpn.connectVpn(config, country, username, password)
   },
   disconnectVpn () {
-    return Vpn.disconnectVpn();
-  }
-};
+    return Vpn.disconnectVpn()
+  },
+}

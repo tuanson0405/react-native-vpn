@@ -103,7 +103,7 @@ public class VpnModule extends ReactContextBaseJavaModule implements ActivityEve
     public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK) {
             //Permission granted, start the VPN
-            connectVpn();
+            startVpn(mServer);
         } else {
             emitStatusEvent(STATUS_ERROR, "Permission Deny");
         }
@@ -157,31 +157,28 @@ public class VpnModule extends ReactContextBaseJavaModule implements ActivityEve
     }
 
     @ReactMethod
-    public void connectVpn() {
+    public void connectVpn(String config, String country, String username, String password) {
         if (!OpenVPNService.getStatus().equals("CONNECTED")) {
+            mServer = new Server(
+                    config,
+                    country,
+                    username,
+                    password
+            );
             Intent intent = VpnService.prepare(reactContext);
             if (intent != null) {
                 reactContext.startActivityForResult(intent, 1, null);
             } else {
-                startVpn();
+                startVpn(mServer);
             }
         } else {
             disconnectVpn();
         }
     }
 
-    private void startVpn() {
+    private void startVpn(Server server) {
         try {
-            Server server = new Server("United States",
-                    null,
-                    "japan.ovpn",
-                    "vpn",
-                    "vpn"
-            );
-            String config = readConfigFromAssets(server.getOvpn());
-            Log.d(TAG, config);
-//            OpenVpnApi.startVpn(reactContext, mServer.getConfig(), mServer.getCountry(), mServer.getOvpnUserName(), mServer.getOvpnUserPassword());
-            OpenVpnApi.startVpn(reactContext, config, server.getCountry(), server.getOvpnUserName(), server.getOvpnUserPassword());
+            OpenVpnApi.startVpn(reactContext, server.getConfig(), server.getCountry(), server.getUserName(), server.getPassword());
             emitStatusEvent(STATUS_CONNECTING, null);
         } catch (RemoteException e) {
             e.printStackTrace();
@@ -217,19 +214,19 @@ public class VpnModule extends ReactContextBaseJavaModule implements ActivityEve
         public void onReceive(Context context, Intent intent) {
             try {
                 String status = intent.getStringExtra("state");
-                emitStatusEvent(status, null);
+                if (status != null && !status.isEmpty()) {
+                    emitStatusEvent(status, null);
+                }
 
                 String duration = intent.getStringExtra("duration");
                 String lastPacketReceive = intent.getStringExtra("lastPacketReceive");
                 String byteIn = intent.getStringExtra("byteIn");
                 String byteOut = intent.getStringExtra("byteOut");
 
-                if (duration == null) duration = "00:00:00";
-                if (lastPacketReceive == null) lastPacketReceive = "0";
-                if (byteIn == null) byteIn = " ";
-                if (byteOut == null) byteOut = " ";
+                if (duration != null && !duration.isEmpty()) {
+                    emitInfoEvent(duration, lastPacketReceive, byteIn, byteOut);
+                }
 
-                emitInfoEvent(duration, lastPacketReceive, byteIn, byteOut);
             } catch (Exception e) {
                 e.printStackTrace();
                 emitStatusEvent(STATUS_ERROR, e.getMessage());
