@@ -20,8 +20,6 @@ import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.ntson.model.Server;
-import com.ntson.utils.Utils;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,7 +43,6 @@ public class VpnModule extends ReactContextBaseJavaModule implements ActivityEve
 
     private OpenVPNThread vpnThread = new OpenVPNThread();
     private OpenVPNService vpnService = new OpenVPNService();
-    private Utils utils;
     private Server mServer;
 
     public VpnModule(ReactApplicationContext reactContext) {
@@ -117,10 +114,8 @@ public class VpnModule extends ReactContextBaseJavaModule implements ActivityEve
     /**
      * Init VPN
      * - Start receiver
-     * - Init utils
      */
     private void initializeVpn() {
-        utils = new Utils();
         VpnStatus.initLogCache(reactContext.getCacheDir());
         LocalBroadcastManager.getInstance(reactContext).registerReceiver(broadcastReceiver, new IntentFilter("connectionState"));
         reactContext.addActivityEventListener(this);
